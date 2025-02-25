@@ -1,0 +1,7 @@
+/* src/app.css */
+@import 'tailwindcss';
+
+/* Ensure the canvas is always visible */
+canvas {
+  display: block;
+}
