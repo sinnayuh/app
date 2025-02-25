@@ -23,7 +23,7 @@
         title: "Portfolio",
         description: "My personal Portfolio, showcasing my skills, projects and contact information. The website you are currently viewing!",
         technologies: ["SvelteKit", "Tailwind", "TypeScript"],
-        link: "https://github.com/sinnayuh/portfolio"
+        link: "https://github.com/sinnayuh/app"
       },
       {
         title: "advSensitvity",

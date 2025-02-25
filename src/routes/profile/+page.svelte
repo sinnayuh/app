@@ -40,19 +40,19 @@
   <!-- Navigation buttons -->
   <div class="flex gap-3 mb-0">
     <button 
-      class="px-4 py-2 rounded-md border border-gray-800 hover:bg-gray-700 transition-colors duration-200"
+      class="px-4 py-2 cursor-pointer rounded-md border border-gray-800 hover:bg-gray-700 transition-colors duration-200"
       on:click={() => navigateTo('/status')}
     >
       <span class="text-gray-400 hover:text-white">status</span>
     </button>
     <button 
-      class="px-4 py-2 rounded-md border border-gray-800 hover:bg-gray-700 transition-colors duration-200"
+      class="px-4 py-2 cursor-pointer rounded-md border border-gray-800 hover:bg-gray-700 transition-colors duration-200"
       on:click={() => navigateTo('/profile')}
     >
       <span class="text-gray-400 hover:text-white">home</span>
     </button>
     <button 
-      class="px-4 py-2 rounded-md border border-gray-800 hover:bg-gray-700 transition-colors duration-200"
+      class="px-4 py-2 cursor-pointer rounded-md border border-gray-800 hover:bg-gray-700 transition-colors duration-200"
       on:click={() => navigateTo('/portfolio')}
     >
       <span class="text-gray-400 hover:text-white">portfolio</span>
