@@ -2,8 +2,12 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { ContainerStatus } from '$lib/types/docker';
 import * as http from 'http';
+import { requireApiKey } from '$lib/server/auth';
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async (event) => {
+    const authResponse = await requireApiKey(event);
+    if (authResponse) return authResponse;
+
     try {
         return new Promise((resolve, reject) => {
             const options = {
