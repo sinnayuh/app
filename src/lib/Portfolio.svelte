@@ -30,7 +30,7 @@
 		{
 			title: 'advSensitvity',
 			description:
-				"A lightweight client-side Fabric mod that enhances Minecraft's mouse sensitivity controls, allowing for precise sensitivity adjustments beyond the vanilla GUI limitations.",
+				"A client-side Fabric mod that enhances Minecraft's mouse sensitivity controls, allowing precise sensitivity adjustments beyond the vanilla GUI limitations.",
 			technologies: ['Java', 'Fabric', 'Gradle'],
 			link: 'https://modrinth.com/mod/advsensitivity'
 		},
