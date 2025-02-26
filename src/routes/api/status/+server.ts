@@ -7,6 +7,7 @@ import * as http from 'http';
 import { env } from '$env/dynamic/private';
 import { requireApiKey } from '$lib/server/auth';
 import { allowedContainers } from '$lib/config/containers';
+import { cache } from '$lib/server/cache';
 
 let isConnected = false;
 
@@ -67,96 +68,183 @@ const calculateUptimeStats = async (containerId: string) => {
     };
 };
 
+const UPDATE_INTERVAL = 60 * 1000;
+const CACHE_KEY = 'container_status';
+
+cache.startInterval(CACHE_KEY, async () => {
+    const dbConnected = await connectDB();
+    return new Promise((resolve) => {
+        const options = {
+            socketPath: '/var/run/docker.sock',
+            path: '/containers/json?all=true',
+            method: 'GET'
+        };
+
+        const req = http.request(options, (res) => {
+            let data = '';
+
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', async () => {
+                try {
+                    const containers: ContainerStatus[] = JSON.parse(data);
+                    
+                    const containerMap = new Map(
+                        containers.map(container => [
+                            container.Names[0].replace('/', ''),
+                            container
+                        ])
+                    );
+
+                    const services = await Promise.all(
+                        allowedContainers.map(async ({ id }) => {
+                            const container = containerMap.get(id);
+                            const stats = await calculateUptimeStats(id);
+                            
+                            return {
+                                name: id,
+                                isOnline: container?.State === 'running',
+                                uptime: container?.Status ?? 'Offline',
+                                lastChecked: new Date().toISOString(),
+                                stats: stats || {
+                                    uptime: 0,
+                                    lastDay: 0,
+                                    lastWeek: 0,
+                                    lastMonth: 0,
+                                    history: []
+                                }
+                            };
+                        })
+                    );
+
+                    if (dbConnected) {
+                        await Promise.all(
+                            allowedContainers.map(({ id }) => 
+                                Container.updateOne(
+                                    { containerId: id },
+                                    {
+                                        $push: {
+                                            checks: {
+                                                timestamp: new Date(),
+                                                isOnline: containerMap.get(id)?.State === 'running'
+                                            }
+                                        }
+                                    },
+                                    { upsert: true }
+                                )
+                            )
+                        );
+                    }
+
+                    resolve(services);
+                } catch (parseError) {
+                    console.error('Parse error:', parseError);
+                    resolve({ error: 'Failed to parse container data' });
+                }
+            });
+        });
+
+        req.on('error', (error) => {
+            console.error('Docker socket error:', error);
+            resolve({ error: 'Failed to connect to Docker socket' });
+        });
+
+        req.end();
+    });
+}, UPDATE_INTERVAL);
+
 export const GET: RequestHandler = async (event) => {
     const authResponse = await requireApiKey(event);
     if (authResponse) return authResponse;
 
     try {
-        const dbConnected = await connectDB();
+        const services = await cache.get(CACHE_KEY, async () => {
+            const dbConnected = await connectDB();
+            return new Promise((resolve) => {
+                const options = {
+                    socketPath: '/var/run/docker.sock',
+                    path: '/containers/json?all=true',
+                    method: 'GET'
+                };
 
-        return new Promise((resolve, reject) => {
-            const options = {
-                socketPath: '/var/run/docker.sock',
-                path: '/containers/json?all=true', // Show all containers, including stopped ones
-                method: 'GET'
-            };
+                const req = http.request(options, (res) => {
+                    let data = '';
 
-            const req = http.request(options, (res) => {
-                let data = '';
+                    res.on('data', (chunk) => {
+                        data += chunk;
+                    });
 
-                res.on('data', (chunk) => {
-                    data += chunk;
-                });
-
-                res.on('end', async () => {
-                    try {
-                        const containers: ContainerStatus[] = JSON.parse(data);
-                        
-                        // Create a map of running containers
-                        const containerMap = new Map(
-                            containers.map(container => [
-                                container.Names[0].replace('/', ''),
-                                container
-                            ])
-                        );
-
-                        // Ensure all allowed containers are included
-                        const services = await Promise.all(
-                            allowedContainers.map(async ({ id }) => {
-                                const container = containerMap.get(id);
-                                const stats = await calculateUptimeStats(id);
-                                
-                                return {
-                                    name: id,
-                                    isOnline: container?.State === 'running' ?? false,
-                                    uptime: container?.Status ?? 'Offline',
-                                    lastChecked: new Date().toISOString(),
-                                    stats: stats || {
-                                        uptime: 0,
-                                        lastDay: 0,
-                                        lastWeek: 0,
-                                        lastMonth: 0,
-                                        history: []
-                                    }
-                                };
-                            })
-                        );
-
-                        // Track status in MongoDB for all allowed containers
-                        if (dbConnected) {
-                            await Promise.all(
-                                allowedContainers.map(({ id }) => 
-                                    Container.updateOne(
-                                        { containerId: id },
-                                        {
-                                            $push: {
-                                                checks: {
-                                                    timestamp: new Date(),
-                                                    isOnline: containerMap.get(id)?.State === 'running' ?? false
-                                                }
-                                            }
-                                        },
-                                        { upsert: true }
-                                    )
-                                )
+                    res.on('end', async () => {
+                        try {
+                            const containers: ContainerStatus[] = JSON.parse(data);
+                            
+                            const containerMap = new Map(
+                                containers.map(container => [
+                                    container.Names[0].replace('/', ''),
+                                    container
+                                ])
                             );
+
+                            const services = await Promise.all(
+                                allowedContainers.map(async ({ id }) => {
+                                    const container = containerMap.get(id);
+                                    const stats = await calculateUptimeStats(id);
+                                    
+                                    return {
+                                        name: id,
+                                        isOnline: container?.State === 'running',
+                                        uptime: container?.Status ?? 'Offline',
+                                        lastChecked: new Date().toISOString(),
+                                        stats: stats || {
+                                            uptime: 0,
+                                            lastDay: 0,
+                                            lastWeek: 0,
+                                            lastMonth: 0,
+                                            history: []
+                                        }
+                                    };
+                                })
+                            );
+
+                            if (dbConnected) {
+                                await Promise.all(
+                                    allowedContainers.map(({ id }) => 
+                                        Container.updateOne(
+                                            { containerId: id },
+                                            {
+                                                $push: {
+                                                    checks: {
+                                                        timestamp: new Date(),
+                                                        isOnline: containerMap.get(id)?.State === 'running'
+                                                    }
+                                                }
+                                            },
+                                            { upsert: true }
+                                        )
+                                    )
+                                );
+                            }
+
+                            resolve(services);
+                        } catch (parseError) {
+                            console.error('Parse error:', parseError);
+                            resolve({ error: 'Failed to parse container data' });
                         }
-
-                        resolve(json(services));
-                    } catch (parseError) {
-                        console.error('Parse error:', parseError);
-                        resolve(json({ error: 'Failed to parse container data' }, { status: 500 }));
-                    }
+                    });
                 });
-            });
 
-            req.on('error', (error) => {
-                console.error('Docker socket error:', error);
-                resolve(json({ error: 'Failed to connect to Docker socket' }, { status: 500 }));
-            });
+                req.on('error', (error) => {
+                    console.error('Docker socket error:', error);
+                    resolve({ error: 'Failed to connect to Docker socket' });
+                });
 
-            req.end();
+                req.end();
+            });
         });
+
+        return json(services);
     } catch (error) {
         console.error('General error:', error);
         return json({ error: 'Failed to fetch container status' }, { status: 500 });
