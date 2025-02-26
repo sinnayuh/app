@@ -130,7 +130,7 @@
         tabindex="0"
         on:keydown={(e) => e.key === 'Enter' && copyToClipboard()}
       >
-        {DISCORD_USERNAME}
+        sin
       </div>
       <div class="text-sm flex items-center gap-1.5">
         <div class="w-2 h-2 rounded-full flex-shrink-0 translate-y-[0.5px]
