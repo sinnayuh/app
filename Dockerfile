@@ -1,14 +1,12 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Set a dummy MONGODB_URI for build time
 ENV MONGODB_URI="mongodb://dummy-build-value:27017/uptime"
 
 COPY package*.json ./
 RUN npm ci
 COPY . .
 
-# Skip MongoDB connection during build
 ENV NODE_ENV=production
 RUN npm run build
 RUN npm prune --production

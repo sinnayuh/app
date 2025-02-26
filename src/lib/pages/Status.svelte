@@ -10,7 +10,7 @@
         { id: 'mongodb', displayName: 'Database' }
     ];
 
-    let intervalId: NodeJS.Timer;
+    let intervalId: number;
 
     const refreshServices = async () => {
         const response = await fetch('/api/status');
@@ -18,7 +18,6 @@
     };
 
     onMount(() => {
-        // Refresh every minute
         intervalId = setInterval(refreshServices, 60000);
     });
 
@@ -56,14 +55,13 @@
                 <p class="mt-2 text-sm text-gray-400">Uptime: {service.uptime}</p>
                 <div class="mt-3 space-y-2">
                     <div class="flex items-center justify-between text-xs">
-                        <span class="text-gray-400">Uptime (30 days)</span>
                         <span class="text-gray-300">{service.stats.lastMonth.toFixed(2)}%</span>
                     </div>
                     <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
                         <div
                             class={`h-full transition-all duration-500 ${getUptimeColor(service.stats.lastMonth)}`}
                             style={`width: ${service.stats.lastMonth}%`}
-                        />
+                        ></div>
                     </div>
                 </div>
                 <p class="mt-3 text-xs text-gray-500">Last checked: {new Date(service.lastChecked).toLocaleString()}</p>
