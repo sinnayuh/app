@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { Container } from '$lib/db/uptimeSchema';
 import * as http from 'http';
 import { env } from '$env/dynamic/private';
+import { requireApiKey } from '$lib/server/auth';
 
 let isConnected = false;
 
@@ -65,7 +66,10 @@ const calculateUptimeStats = async (containerId: string) => {
     };
 };
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async (event) => {
+    const authResponse = await requireApiKey(event);
+    if (authResponse) return authResponse;
+
     try {
         const dbConnected = await connectDB();
 
