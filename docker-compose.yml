@@ -1,0 +1,11 @@
+networks:
+  proxiable:
+    name: proxiable
+    external: true
+
+services:
+  portfolio-app:
+    container_name: portfolio-app
+    image: portfolio-app:latest
+    networks:
+      - proxiable
