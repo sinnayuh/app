@@ -40,6 +40,20 @@
 				'My custom screenshot utility for my Hyperland setup with Arch. Utilizing Grimblast, swappy, slurp & hyprshade.',
 			technologies: ['Shell'],
 			link: 'https://github.com/sinnayuh/hypr-screenshot'
+		},
+		{
+			title: 'Luxeria',
+			description:
+				'A feature-rich Minecraft plugin that enhances SMP experience with custom home management, spawner control, and dynamic scoreboard statistics. ',
+			technologies: ['Java', 'Spigot', 'Gradle'],
+			link: 'https://github.com/sinnayuh/Luxeria'
+		},
+		{
+			title: 'MCTier',
+			description:
+				'A feature-rich Minecraft plugin that uses the mctiers.com API to provide player statistics and leaderboards in-game.',
+			technologies: ['Java', 'Spigot', 'Gradle'],
+			link: 'https://github.com/sinnayuh/MCTier'
 		}
 	];
 
@@ -92,7 +106,7 @@
 <div class="mx-auto mt-6 w-full max-w-6xl">
 	<div class="space-y-2 md:w-2/3">
 		<h1 class="max-w-3xl text-4xl font-bold text-white">
-			Developer, Linux nerd (i use arch btw), Docker activist, Scripter and gamer.
+			Developer, Linux Nerd, Docker Activist, Scripter, Gamer & Anime Enjoyer.
 		</h1>
 		<p class="max-w-xl text-sm leading-relaxed text-gray-400">
 			I'm sin, a developer and system administrator based in the United Kingdom. I make sure all of
@@ -110,7 +124,7 @@
 				<div class="space-y-6">
 					<div>
 						<h3 class="mb-3 text-sm text-gray-400">
-							My Tech-stack, all the tools & languages I am capable of using.
+							My Tech-Stack.
 						</h3>
 						<div class="flex flex-wrap gap-3">
 							{#each skills.development as skill}
