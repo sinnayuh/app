@@ -6,7 +6,7 @@ interface CacheData {
 class CacheService {
     private cache: Map<string, CacheData> = new Map();
     private updateIntervals: Map<string, NodeJS.Timer> = new Map();
-    private readonly DEFAULT_TTL = 60 * 1000; // 60 seconds
+    private readonly DEFAULT_TTL = 60 * 1000;
 
     async get(key: string, fetchData: () => Promise<any>, ttl = this.DEFAULT_TTL): Promise<any> {
         const now = Date.now();
@@ -23,7 +23,7 @@ class CacheService {
 
     startInterval(key: string, fetchData: () => Promise<any>, interval: number) {
         if (this.updateIntervals.has(key)) {
-            clearInterval(this.updateIntervals.get(key));
+            clearInterval(this.updateIntervals.get(key) as NodeJS.Timeout);
         }
 
         const timer = setInterval(async () => {
@@ -41,7 +41,7 @@ class CacheService {
     stopInterval(key: string) {
         const interval = this.updateIntervals.get(key);
         if (interval) {
-            clearInterval(interval);
+            clearInterval(interval as NodeJS.Timeout);
             this.updateIntervals.delete(key);
         }
     }

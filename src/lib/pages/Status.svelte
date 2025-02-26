@@ -6,12 +6,12 @@
     export let services: ServiceStatus[];
 
     let intervalId: number;
-    const REFRESH_INTERVAL = 60000; // Match server's update interval
+    const REFRESH_INTERVAL = 60000;
     let lastRefresh = 0;
 
     const refreshServices = async () => {
         const now = Date.now();
-        if (now - lastRefresh < 5000) return; // Prevent refresh spam
+        if (now - lastRefresh < 5000) return;
         
         const response = await fetch('/api/status');
         services = await response.json();
