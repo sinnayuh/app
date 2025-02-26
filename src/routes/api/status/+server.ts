@@ -6,6 +6,7 @@ import { Container } from '$lib/db/uptimeSchema';
 import * as http from 'http';
 import { env } from '$env/dynamic/private';
 import { requireApiKey } from '$lib/server/auth';
+import { allowedContainers } from '$lib/config/containers';
 
 let isConnected = false;
 
@@ -76,7 +77,7 @@ export const GET: RequestHandler = async (event) => {
         return new Promise((resolve, reject) => {
             const options = {
                 socketPath: '/var/run/docker.sock',
-                path: '/containers/json',
+                path: '/containers/json?all=true', // Show all containers, including stopped ones
                 method: 'GET'
             };
 
@@ -90,58 +91,56 @@ export const GET: RequestHandler = async (event) => {
                 res.on('end', async () => {
                     try {
                         const containers: ContainerStatus[] = JSON.parse(data);
+                        
+                        // Create a map of running containers
+                        const containerMap = new Map(
+                            containers.map(container => [
+                                container.Names[0].replace('/', ''),
+                                container
+                            ])
+                        );
 
-                        if (!dbConnected) {
-                            resolve(json(containers.map(container => ({
-                                name: container.Names[0].replace('/', ''),
-                                isOnline: container.State === 'running',
-                                uptime: container.Status,
-                                lastChecked: new Date().toISOString(),
-                                stats: {
-                                    uptime: 0,
-                                    lastDay: 0,
-                                    lastWeek: 0,
-                                    lastMonth: 0,
-                                    history: []
-                                }
-                            }))));
-                            return;
-                        }
-
-                        for (const container of containers) {
-                            const containerId = container.Names[0].replace('/', '');
-                            await Container.updateOne(
-                                { containerId },
-                                { 
-                                    $push: { 
-                                        checks: {
-                                            timestamp: new Date(),
-                                            isOnline: container.State === 'running'
-                                        }
+                        // Ensure all allowed containers are included
+                        const services = await Promise.all(
+                            allowedContainers.map(async ({ id }) => {
+                                const container = containerMap.get(id);
+                                const stats = await calculateUptimeStats(id);
+                                
+                                return {
+                                    name: id,
+                                    isOnline: container?.State === 'running' ?? false,
+                                    uptime: container?.Status ?? 'Offline',
+                                    lastChecked: new Date().toISOString(),
+                                    stats: stats || {
+                                        uptime: 0,
+                                        lastDay: 0,
+                                        lastWeek: 0,
+                                        lastMonth: 0,
+                                        history: []
                                     }
-                                },
-                                { upsert: true }
+                                };
+                            })
+                        );
+
+                        // Track status in MongoDB for all allowed containers
+                        if (dbConnected) {
+                            await Promise.all(
+                                allowedContainers.map(({ id }) => 
+                                    Container.updateOne(
+                                        { containerId: id },
+                                        {
+                                            $push: {
+                                                checks: {
+                                                    timestamp: new Date(),
+                                                    isOnline: containerMap.get(id)?.State === 'running' ?? false
+                                                }
+                                            }
+                                        },
+                                        { upsert: true }
+                                    )
+                                )
                             );
                         }
-
-                        const services = await Promise.all(containers.map(async container => {
-                            const name = container.Names[0].replace('/', '');
-                            const stats = await calculateUptimeStats(name);
-                            
-                            return {
-                                name,
-                                isOnline: container.State === 'running',
-                                uptime: container.Status,
-                                lastChecked: new Date().toISOString(),
-                                stats: stats || {
-                                    uptime: 0,
-                                    lastDay: 0,
-                                    lastWeek: 0,
-                                    lastMonth: 0,
-                                    history: []
-                                }
-                            };
-                        }));
 
                         resolve(json(services));
                     } catch (parseError) {
