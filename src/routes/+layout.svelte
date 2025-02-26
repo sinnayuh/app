@@ -6,4 +6,5 @@
 
 <AnimateTitle />
 
+<div id="portal-container"></div>
 {@render children()}

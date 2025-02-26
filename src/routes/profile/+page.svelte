@@ -5,6 +5,7 @@
 	import Particles from '$lib/Particles.svelte';
 	import Lanyard from '$lib/Lanyard.svelte';
 	import Nav from '$lib/Nav.svelte';
+	import Toast from '$lib/Toast.svelte';
 
 	const info = [
 		{ label: 'discord:', value: 'sinnayuh', link: 'https://discord.com/users/204608845325008906' },
@@ -20,6 +21,12 @@
 		cover: '/music/haunted.jpg',
 		spotifyUrl: 'https://open.spotify.com/track/1toNKayLMeCcVlsLGXJl7n'
 	};
+
+	let showToast = false;
+  
+	function handleToast(event: CustomEvent) {
+	  showToast = event.detail.show;
+	}
 </script>
 
 <div
@@ -32,6 +39,8 @@
 </div>
 
 <Particles />
+
+<Toast show={showToast} message="Username copied to clipboard" />
 
 <div class="content relative z-10 flex min-h-screen flex-col items-center p-8 text-white">
 	<Nav />
@@ -61,7 +70,7 @@
 	</div>
 
 	<div class="mt-3 w-full max-w-md backdrop-blur-sm">
-		<Lanyard />
+		<Lanyard on:toast={handleToast} />
 	</div>
 
 	<div class="mt-3 w-full max-w-md backdrop-blur-sm">

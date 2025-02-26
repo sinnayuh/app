@@ -1,13 +1,18 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { Activity, Music } from 'lucide-svelte';
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { Activity, Music, Check } from 'lucide-svelte';
 
   const DISCORD_ID = '204608845325008906';
+  const DISCORD_USERNAME = 'sinnayuh';
   
   let data: any = null;
   let error = false;
   let socket: WebSocket;
+  let showToast = false;
+  let toastVisible = false;
   
+  const dispatch = createEventDispatcher();
+
   function connectWebSocket() {
     socket = new WebSocket('wss://api.lanyard.rest/socket');
     
@@ -80,9 +85,14 @@
     }
   }
   
-  function openDiscordProfile() {
-    if (typeof window !== 'undefined' && data) {
-      window.open(`https://discord.com/users/${DISCORD_ID}`, '_blank');
+  function copyToClipboard() {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(DISCORD_USERNAME);
+      dispatch('toast', { show: true });
+      
+      setTimeout(() => {
+        dispatch('toast', { show: false });
+      }, 2000);
     }
   }
 </script>
@@ -100,10 +110,10 @@
   <div class="flex items-center gap-4 mb-4">
     <div 
       class="w-12 h-12 bg-gray-800 flex-shrink-0 overflow-hidden cursor-pointer rounded-full relative"
-      on:click={openDiscordProfile}
+      on:click={copyToClipboard}
       role="button"
       tabindex="0"
-      on:keydown={(e) => e.key === 'Enter' && openDiscordProfile()}
+      on:keydown={(e) => e.key === 'Enter' && copyToClipboard()}
     >
       <img 
         src={`https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}`} 
@@ -116,10 +126,10 @@
     <div class="flex-1">
       <div 
         class="font-bold cursor-pointer hover:underline" 
-        on:click={openDiscordProfile}
+        on:click={copyToClipboard}
         role="button"
         tabindex="0"
-        on:keydown={(e) => e.key === 'Enter' && openDiscordProfile()}
+        on:keydown={(e) => e.key === 'Enter' && copyToClipboard()}
       >
         sin
       </div>
