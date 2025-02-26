@@ -6,13 +6,25 @@ import { Container } from '$lib/db/uptimeSchema';
 import * as http from 'http';
 import { env } from '$env/dynamic/private';
 
-if (!env.MONGODB_URI) {
-    throw new Error('MONGODB_URI environment variable is not defined');
-}
+let isConnected = false;
 
-mongoose.connect(env.MONGODB_URI).catch(err => {
-    console.error('MongoDB connection error:', err);
-});
+const connectDB = async () => {
+    if (!env.MONGODB_URI) {
+        console.error('MONGODB_URI not found');
+        return false;
+    }
+
+    if (isConnected) return true;
+
+    try {
+        await mongoose.connect(env.MONGODB_URI);
+        isConnected = true;
+        return true;
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
+        return false;
+    }
+};
 
 const calculateUptimeStats = async (containerId: string) => {
     const now = new Date();
@@ -48,6 +60,8 @@ const calculateUptimeStats = async (containerId: string) => {
 
 export const GET: RequestHandler = async () => {
     try {
+        const dbConnected = await connectDB();
+
         return new Promise((resolve, reject) => {
             const options = {
                 socketPath: '/var/run/docker.sock',
@@ -65,7 +79,24 @@ export const GET: RequestHandler = async () => {
                 res.on('end', async () => {
                     try {
                         const containers: ContainerStatus[] = JSON.parse(data);
-                        
+
+                        if (!dbConnected) {
+                            resolve(json(containers.map(container => ({
+                                name: container.Names[0].replace('/', ''),
+                                isOnline: container.State === 'running',
+                                uptime: container.Status,
+                                lastChecked: new Date().toISOString(),
+                                stats: {
+                                    uptime: 0,
+                                    lastDay: 0,
+                                    lastWeek: 0,
+                                    lastMonth: 0,
+                                    history: []
+                                }
+                            }))));
+                            return;
+                        }
+
                         for (const container of containers) {
                             const containerId = container.Names[0].replace('/', '');
                             await Container.updateOne(
