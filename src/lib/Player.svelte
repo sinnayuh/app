@@ -2,7 +2,6 @@
   import { onMount, onDestroy } from 'svelte';
   import { Pause, Play, Volume, Volume1, Volume2, VolumeX, Loader } from 'lucide-svelte';
 
-  // Props with added album cover and Spotify link
   interface Song {
       title: string;
       artist: string;
@@ -19,7 +18,6 @@
       spotifyUrl: 'https://open.spotify.com/track/default'
   };
 
-  // Audio state
   let audio: HTMLAudioElement | null = null;
   let isPlaying: boolean = false;
   let isLoading: boolean = false;
@@ -28,10 +26,8 @@
   let currentTime: number = 0;
   let duration: number = 0;
 
-  // Scrubber dragging state
   let isDragging: boolean = false;
 
-  // Format time in MM:SS
   function formatTime(seconds: number): string {
       if (isNaN(seconds)) return '0:00';
       const min = Math.floor(seconds / 60);
@@ -39,7 +35,6 @@
       return `${min}:${sec}`;
   }
 
-  // Start dragging
   function startDrag(e: MouseEvent): void {
       isDragging = true;
       updateScrubberPosition(e);
@@ -49,7 +44,6 @@
       }
   }
 
-  // Update scrubber position while dragging
   function updateScrubberPosition(e: MouseEvent): void {
       if (!isDragging || !audio) return;
 
@@ -61,7 +55,6 @@
       audio.currentTime = currentTime;
   }
 
-  // Stop dragging
   function stopDrag(): void {
       isDragging = false;
       if (typeof window !== 'undefined') {
@@ -70,7 +63,6 @@
       }
   }
 
-  // Lazy load audio when play is first clicked
   async function initializeAudio() {
       if (!audio && !isLoading) {
           isLoading = true;
@@ -95,13 +87,11 @@
               isPlaying = false;
           });
 
-          // Set source after adding listeners
           audio.src = song.file;
           await audio.load();
       }
   }
 
-  // Toggle play/pause
   async function togglePlay(): Promise<void> {
       if (!audio && !isLoading) {
           await initializeAudio();
@@ -117,20 +107,17 @@
       }
   }
 
-  // Update volume
   function updateVolume(): void {
       if (!audio) return;
       audio.volume = volume;
   }
 
-  // Add this function to handle Spotify link opening
   function openSpotify(): void {
         if (typeof window !== 'undefined' && song.spotifyUrl) {
             window.open(song.spotifyUrl, '_blank');
         }
     }
 
-  // Cleanup on destroy
   onDestroy(() => {
       if (audio) {
           audio.pause();
@@ -142,7 +129,6 @@
   
   <div class="border border-gray-800 rounded-md p-4 max-w-md w-full">
     <div class="flex items-center gap-4 mb-3">
-      <!-- Album cover with link -->
       <div 
         class="w-12 h-12 bg-gray-800 flex-shrink-0 overflow-hidden cursor-pointer" 
         on:click={openSpotify}
@@ -153,7 +139,6 @@
         <img src={song.cover} alt="Album cover" class="w-full h-full object-cover" />
       </div>
   
-      <!-- Song info with link -->
       <div class="flex-1">
         <div 
           class="font-bold cursor-pointer hover:underline" 
@@ -167,7 +152,6 @@
         <div class="text-gray-400 text-sm">{song.artist}</div>
       </div>
   
-      <!-- Play/pause button -->
       <button 
         class="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-gray-700"
         on:click={togglePlay}
@@ -183,7 +167,6 @@
       </button>
     </div>
   
-    <!-- Progress bar with scrubber -->
     <div 
       class="h-2 w-full bg-gray-700 rounded-full mb-1 cursor-pointer relative {!isAudioLoaded ? 'opacity-50' : ''}"
       on:mousedown={isAudioLoaded ? startDrag : undefined}
@@ -206,13 +189,11 @@
       ></div>
     </div>
   
-    <!-- Time display -->
     <div class="flex justify-between text-xs text-gray-400 mb-3">
       <span>{formatTime(currentTime)}</span>
       <span>{formatTime(duration)}</span>
     </div>
   
-    <!-- Volume control -->
     <div class="flex items-center gap-2">
       {#if volume === 0}
         <VolumeX size={16} />

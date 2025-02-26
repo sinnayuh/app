@@ -90,7 +90,6 @@
 </script>
 
 <div class="mx-auto mt-6 w-full max-w-6xl">
-	<!-- Introduction -->
 	<div class="space-y-2 md:w-2/3">
 		<h1 class="max-w-3xl text-4xl font-bold text-white">
 			Developer, Linux nerd (i use arch btw), Docker activist, Scripter and gamer.
@@ -104,9 +103,7 @@
 </div>
 
 <div class="mx-auto mt-6 w-full max-w-6xl">
-	<!-- Top Row: Skills & Contact -->
 	<div class="mb-8 flex flex-col gap-8 md:flex-row">
-		<!-- Skills & Tools -->
 		<div class="md:w-2/3">
 			<div class="h-full rounded-lg border border-gray-800 p-6 backdrop-blur-sm">
 				<h2 class="mb-4 text-2xl font-bold">Skills & Tools</h2>
@@ -130,7 +127,6 @@
 			</div>
 		</div>
 
-		<!-- Contact -->
 		<div class="md:w-1/3">
 			<div class="h-full rounded-lg border border-gray-800 p-4 backdrop-blur-sm">
 				<h2 class="mb-2 text-xl font-bold">Contact</h2>
@@ -166,7 +162,6 @@
 		</div>
 	</div>
 
-	<!-- Bottom Row: Projects (Full Width) -->
 	<div class="rounded-lg border border-gray-800 p-6 backdrop-blur-sm">
 		<h2 class="mb-4 text-2xl font-bold">Projects</h2>
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
