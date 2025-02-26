@@ -109,7 +109,7 @@
 {:else}
   <div class="flex items-center gap-4 mb-4">
     <div 
-      class="w-12 h-12 bg-gray-800 flex-shrink-0 overflow-hidden cursor-pointer rounded-full relative"
+      class="w-12 h-12 bg-gray-800 flex-shrink-0 overflow-hidden cursor-pointer rounded-full"
       on:click={copyToClipboard}
       role="button"
       tabindex="0"
@@ -120,7 +120,6 @@
         alt="Discord Avatar" 
         class="w-full h-full object-cover"
       >
-      <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-800 {data.discord_status === 'online' ? 'bg-green-500' : data.discord_status === 'idle' ? 'bg-yellow-500' : data.discord_status === 'dnd' ? 'bg-red-500' : 'bg-gray-500'}"></div>
     </div>
 
     <div class="flex-1">
@@ -131,9 +130,17 @@
         tabindex="0"
         on:keydown={(e) => e.key === 'Enter' && copyToClipboard()}
       >
-        sin
+        {DISCORD_USERNAME}
       </div>
-      <div class="text-gray-400 text-sm">{getStatusText(data.discord_status)}</div>
+      <div class="text-sm flex items-center gap-1.5">
+        <div class="w-2 h-2 rounded-full flex-shrink-0 translate-y-[0.5px]
+          {data.discord_status === 'online' ? 'bg-green-500' : 
+          data.discord_status === 'idle' ? 'bg-yellow-500' : 
+          data.discord_status === 'dnd' ? 'bg-red-500' : 
+          'bg-gray-500'}"
+        ></div>
+        <span class="text-gray-400 leading-none">{getStatusText(data.discord_status)}</span>
+      </div>
     </div>
   </div>
 
@@ -164,8 +171,18 @@
           </div>
         {:else}
           <div class="flex items-center gap-3 border-t border-gray-800 pt-4">
-            <div class="w-10 h-10 flex-shrink-0 bg-gray-800 flex items-center justify-center">
-              <Activity size={20} />
+            <div class="w-10 h-10 flex-shrink-0 bg-gray-800 flex items-center justify-center overflow-hidden">
+              {#if activity.assets?.large_image}
+                <img 
+                  src={activity.assets.large_image.startsWith('mp:external/') 
+                    ? `https://media.discordapp.net/external/${activity.assets.large_image.slice(12)}`
+                    : `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.png`}
+                  alt="Activity Icon"
+                  class="w-full h-full object-cover"
+                />
+              {:else}
+                <Activity size={20} />
+              {/if}
             </div>
             <div class="flex-1 overflow-hidden">
               <div class="font-medium truncate">{getActivityType(activity.type)} {activity.name}</div>
