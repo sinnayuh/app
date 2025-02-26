@@ -1,27 +1,50 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { ContainerStatus } from '$lib/types/docker';
+import * as http from 'http';
 
 export const GET: RequestHandler = async () => {
     try {
-        const response = await fetch('http://unix:/var/run/docker.sock:/containers/json', {
-            headers: {
-                'Host': 'localhost',
-                'Content-Type': 'application/json'
-            }
+        return new Promise((resolve, reject) => {
+            const options = {
+                socketPath: '/var/run/docker.sock',
+                path: '/containers/json',
+                method: 'GET'
+            };
+
+            const req = http.request(options, (res) => {
+                let data = '';
+
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    try {
+                        const containers: ContainerStatus[] = JSON.parse(data);
+                        const services = containers.map(container => ({
+                            name: container.Names[0].replace('/', ''),
+                            isOnline: container.State === 'running',
+                            uptime: container.Status,
+                            lastChecked: new Date().toISOString()
+                        }));
+                        resolve(json(services));
+                    } catch (parseError) {
+                        console.error('Parse error:', parseError);
+                        resolve(json({ error: 'Failed to parse container data' }, { status: 500 }));
+                    }
+                });
+            });
+
+            req.on('error', (error) => {
+                console.error('Docker socket error:', error);
+                resolve(json({ error: 'Failed to connect to Docker socket' }, { status: 500 }));
+            });
+
+            req.end();
         });
-
-        const containers: ContainerStatus[] = await response.json();
-        
-        const services = containers.map(container => ({
-            name: container.Names[0].replace('/', ''),
-            isOnline: container.State === 'running',
-            uptime: container.Status,
-            lastChecked: new Date().toISOString()
-        }));
-
-        return json(services);
     } catch (error) {
+        console.error('General error:', error);
         return json({ error: 'Failed to fetch container status' }, { status: 500 });
     }
 };
