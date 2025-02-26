@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { asciiArt } from '$lib/AsciiArt';
-	import MusicPlayer from '$lib/Player.svelte';
-	import Typewriter from '$lib/Typewriter.svelte';
-	import Particles from '$lib/Particles.svelte';
-	import Lanyard from '$lib/Lanyard.svelte';
-	import Nav from '$lib/Nav.svelte';
-	import Toast from '$lib/Toast.svelte';
+	import { asciiArt } from '$lib/utils/AsciiArt';
+	import MusicPlayer from '$lib/utils/Player.svelte';
+	import Typewriter from '$lib/utils/Typewriter.svelte';
+	import Particles from '$lib/utils/Particles.svelte';
+	import Lanyard from '$lib/utils/Lanyard.svelte';
+	import Nav from '$lib/pages/Nav.svelte';
+	import Toast from '$lib/utils/Toast.svelte';
 
 	const info = [
 		{ label: 'discord:', value: 'sinnayuh', link: 'https://discord.com/users/204608845325008906' },

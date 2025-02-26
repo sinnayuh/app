@@ -8,6 +8,15 @@ declare global {
 		// interface PageState {}
 		// interface Platform {}
 	}
+    interface ImportMetaEnv {
+        MONGODB_URI: string;
+    }
+}
+
+declare module '$env/dynamic/private' {
+    export interface Env {
+        MONGODB_URI: string;
+    }
 }
 
 export {};

@@ -1,7 +1,50 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import type { RequestHandler } from '@sveltejs/kit';
 import type { ContainerStatus } from '$lib/types/docker';
+import mongoose from 'mongoose';
+import { Container } from '$lib/db/uptimeSchema';
 import * as http from 'http';
+import { env } from '$env/dynamic/private';
+
+if (!env.MONGODB_URI) {
+    throw new Error('MONGODB_URI environment variable is not defined');
+}
+
+mongoose.connect(env.MONGODB_URI).catch(err => {
+    console.error('MongoDB connection error:', err);
+});
+
+const calculateUptimeStats = async (containerId: string) => {
+    const now = new Date();
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const container = await Container.findOne({ containerId });
+    if (!container) return null;
+
+    const checks = container.checks;
+    const dayChecks = checks.filter(c => c.timestamp >= dayAgo);
+    const weekChecks = checks.filter(c => c.timestamp >= weekAgo);
+    const monthChecks = checks.filter(c => c.timestamp >= monthAgo);
+
+    const calculatePercentage = (checks: any[]) => {
+        if (checks.length === 0) return 0;
+        const upChecks = checks.filter(c => c.isOnline).length;
+        return (upChecks / checks.length) * 100;
+    };
+
+    return {
+        uptime: calculatePercentage(checks),
+        lastDay: calculatePercentage(dayChecks),
+        lastWeek: calculatePercentage(weekChecks),
+        lastMonth: calculatePercentage(monthChecks),
+        history: checks.map(c => ({
+            timestamp: c.timestamp,
+            isOnline: c.isOnline
+        }))
+    };
+};
 
 export const GET: RequestHandler = async () => {
     try {
@@ -19,15 +62,45 @@ export const GET: RequestHandler = async () => {
                     data += chunk;
                 });
 
-                res.on('end', () => {
+                res.on('end', async () => {
                     try {
                         const containers: ContainerStatus[] = JSON.parse(data);
-                        const services = containers.map(container => ({
-                            name: container.Names[0].replace('/', ''),
-                            isOnline: container.State === 'running',
-                            uptime: container.Status,
-                            lastChecked: new Date().toISOString()
+                        
+                        for (const container of containers) {
+                            const containerId = container.Names[0].replace('/', '');
+                            await Container.updateOne(
+                                { containerId },
+                                { 
+                                    $push: { 
+                                        checks: {
+                                            timestamp: new Date(),
+                                            isOnline: container.State === 'running'
+                                        }
+                                    }
+                                },
+                                { upsert: true }
+                            );
+                        }
+
+                        const services = await Promise.all(containers.map(async container => {
+                            const name = container.Names[0].replace('/', '');
+                            const stats = await calculateUptimeStats(name);
+                            
+                            return {
+                                name,
+                                isOnline: container.State === 'running',
+                                uptime: container.Status,
+                                lastChecked: new Date().toISOString(),
+                                stats: stats || {
+                                    uptime: 0,
+                                    lastDay: 0,
+                                    lastWeek: 0,
+                                    lastMonth: 0,
+                                    history: []
+                                }
+                            };
                         }));
+
                         resolve(json(services));
                     } catch (parseError) {
                         console.error('Parse error:', parseError);

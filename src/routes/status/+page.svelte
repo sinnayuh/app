@@ -1,7 +1,7 @@
 <script lang="ts">
-    import Particles from '$lib/Particles.svelte';
-    import Nav from '$lib/Nav.svelte';
-    import Status from '$lib/Status.svelte';
+    import Particles from '$lib/utils/Particles.svelte';
+    import Nav from '$lib/pages/Nav.svelte';
+    import Status from '$lib/pages/Status.svelte';
     import type { PageData } from './$types';
 
     export let data: PageData;
