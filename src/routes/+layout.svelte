@@ -1,5 +1,5 @@
 <script>
-	import AnimateTitle from '$lib/AnimateTitle.svelte';
+	import AnimateTitle from '$lib/utils/AnimateTitle.svelte';
 	import '../app.css';
 	let { children } = $props();
 </script>

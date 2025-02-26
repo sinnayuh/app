@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import Particles from '$lib/Particles.svelte';
+  import Particles from '$lib/utils/Particles.svelte';
 
   function handleClick() {
     goto('/profile');

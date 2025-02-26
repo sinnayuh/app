@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Particles from '$lib/Particles.svelte';
-	import Portfolio from '$lib/Portfolio.svelte';
-	import Nav from '$lib/Nav.svelte';
+	import Particles from '$lib/utils/Particles.svelte';
+	import Portfolio from '$lib/pages/Portfolio.svelte';
+	import Nav from '$lib/pages/Nav.svelte';
 </script>
 
 <div

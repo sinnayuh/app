@@ -4,8 +4,12 @@ networks:
     external: true
 
 services:
-  portfolio-app:
-    container_name: portfolio-app
-    image: portfolio-app:latest
+  portfolio-app-dev:
+    container_name: portfolio-app-dev
+    image: portfolio-app:dev
+    env_file:
+      - .env
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - proxiable
