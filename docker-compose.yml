@@ -4,9 +4,9 @@ networks:
     external: true
 
 services:
-  portfolio-app-dev:
-    container_name: portfolio-app-dev
-    image: portfolio-app:dev
+  portfolio-app:
+    container_name: portfolio-app
+    image: portfolio-app:latest
     env_file:
       - .env
     volumes:
