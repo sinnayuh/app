@@ -87,11 +87,15 @@
   }
 </script>
 
-<div class="border border-gray-800 rounded-md p-4 max-w-md w-full">
+<div class="border border-gray-800 rounded-md p-4 max-w-md w-full min-h-[144px]">
 {#if error}
-  <div class="text-gray-400 text-center py-2">Failed to load Discord status</div>
+  <div class="flex flex-col h-full justify-center">
+    <div class="text-gray-400 text-center">Failed to load Discord status</div>
+  </div>
 {:else if !data}
-  <div class="text-gray-400 text-center py-2">Loading Discord status...</div>
+  <div class="flex flex-col h-full justify-center">
+    <div class="text-gray-400 text-center">Loading Discord status...</div>
+  </div>
 {:else}
   <div class="flex items-center gap-4 mb-3">
     <div 
@@ -163,6 +167,15 @@
         {/if}
       </div>
     {/each}
+  {:else}
+    <div class="flex items-center gap-3 border-t border-gray-800 pt-3">
+      <div class="w-10 h-10 flex-shrink-0 bg-gray-800 flex items-center justify-center">
+        <Activity size={20} />
+      </div>
+      <div class="flex-1 overflow-hidden">
+        <div class="font-medium truncate">Doing nothing</div>
+      </div>
+    </div>
   {/if}
 {/if}
 </div>

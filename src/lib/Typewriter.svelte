@@ -3,8 +3,8 @@
 	import Typewriter from 'typewriter-effect/dist/core';
 
 	let typewriterElement: HTMLDivElement;
+	let isInitialized = false;
 
-	// Your list of strings
 	const strings: string[] = [
 		'i have two rules. rule one: im always right. rule two: if im wrong, refer to rule one',
 		'fame is for dweebs. just get rich',
@@ -35,7 +35,6 @@
         "hello, my name is :(){ :|: & };:",
 	];
 
-	// Function to shuffle array and get a random order
 	function shuffleArray(array: string[]) {
 		const newArray = [...array];
 		for (let i = newArray.length - 1; i > 0; i--) {
@@ -48,32 +47,43 @@
 	onMount(() => {
 		if (!typewriterElement) return;
 
-		// Initialize the typewriter
-		const typewriter = new Typewriter(typewriterElement, {
-			loop: true,
-			delay: 50,
-			deleteSpeed: 30
-		});
-		
-		// Initially shuffle the strings
-		const shuffledStrings = shuffleArray(strings);
-		
-		// Build the typewriter sequence
-		let sequence = typewriter;
-		
-		// Add each string to the sequence
-		shuffledStrings.forEach((string, index) => {
-			if (index > 0) {
-				sequence = sequence.deleteAll();
-			}
-			sequence = sequence
-				.typeString(string)
-				.pauseFor(2000);
-		});
-		
-		// Start the typewriter
-		sequence.start();
+		setTimeout(() => {
+			isInitialized = true;
+
+			const typewriter = new Typewriter(typewriterElement, {
+				loop: true,
+				delay: 50,
+				deleteSpeed: 30
+			});
+			
+			const shuffledStrings = shuffleArray(strings);
+			
+			let sequence = typewriter;
+			
+			shuffledStrings.forEach((string, index) => {
+				if (index > 0) {
+					sequence = sequence.deleteAll();
+				}
+				sequence = sequence
+					.typeString(string)
+					.pauseFor(2000);
+			});
+			
+			sequence.start();
+		}, 500);
 	});
 </script>
 
-<div bind:this={typewriterElement} class="text-center text-gray-400"></div>
+<div class="relative min-h-[24px] whitespace-nowrap">
+	<div 
+		class="text-center text-gray-400 absolute left-1/2 -translate-x-1/2 transition-opacity duration-500" 
+		style:opacity={isInitialized ? 0 : 1}
+	>
+		loading...
+	</div>
+	<div 
+		bind:this={typewriterElement} 
+		class="text-center text-gray-400 absolute left-1/2 -translate-x-1/2 transition-opacity duration-500" 
+		style:opacity={isInitialized ? 1 : 0}
+	></div>
+</div>
