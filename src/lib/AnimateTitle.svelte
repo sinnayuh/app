@@ -2,7 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
   
     let Title = 'sinister.codes ';
-    let delay = 300;
+    let delay = 200;
     let counter = 0;
     let direction = true;
     let interval: any;

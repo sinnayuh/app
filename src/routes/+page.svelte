@@ -3,11 +3,9 @@
   import Particles from '$lib/Particles.svelte';
 
   function handleClick() {
-    // Navigate to the profile page
     goto('/profile');
   }
 
-  // Add keyboard event handler for accessibility
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Enter" || event.key === " ") {
       handleClick();
@@ -29,5 +27,5 @@
   class="w-full h-screen flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2"
   style="position: relative; z-index: 2;"
 >
-  <h1 class="text-gray-400">welcome</h1>
+  <h1 class="text-gray-400 cursor-pointer hover:text-white">welcome</h1>
 </button>
