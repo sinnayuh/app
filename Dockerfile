@@ -9,10 +9,10 @@ RUN npm prune --production
 FROM node:22-alpine
 WORKDIR /app
 
-# Install curl and setup docker access
+# Install curl and setup docker access with ping group GID
 RUN apk add --no-cache curl \
-    && addgroup -g 999 docker \
-    && adduser node docker
+    && adduser node ping \
+    && chown -R node:ping /app
 
 COPY --from=builder /app/build build/
 COPY --from=builder /app/node_modules node_modules/
