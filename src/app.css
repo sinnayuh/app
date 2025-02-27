@@ -6,22 +6,29 @@ canvas {
   display: block;
 }
 
-* {
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  /* Show scrollbar when needed */
+  .scrollbar::-webkit-scrollbar {
+    display: block;
+  }
+  .scrollbar {
+    -ms-overflow-style: auto;  /* IE and Edge */
+    scrollbar-width: auto;  /* Firefox */
+  }
 }
 
-*::-webkit-scrollbar {
-  display: none !important;
-}
-
-html, body {
-  overflow-x: hidden;
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
-}
-
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  display: none !important;
+@layer base {
+  html,
+  body {
+    @apply no-scrollbar overflow-x-hidden;
+  }
 }
