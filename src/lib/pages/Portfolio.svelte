@@ -110,7 +110,7 @@
 		</h1>
 		<p class="max-w-xl text-sm leading-relaxed text-gray-400">
 			I'm sin, a developer and system administrator based in the United Kingdom. I make sure all of
-			Flyte's services stay online and secure, where developers can create producuts to empower
+			Flyte's services stay online and secure, where developers can create products to empower
 			freelancers and our clients.
 		</p>
 	</div>
