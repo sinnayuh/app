@@ -1,7 +1,31 @@
 /* src/app.css */
 @import 'tailwindcss';
 
-/* Ensure the canvas is always visible */
 canvas {
   display: block;
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+html.no-scrollbar,
+body.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+html.no-scrollbar::-webkit-scrollbar,
+body.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
