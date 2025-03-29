@@ -1,14 +1,40 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { ContainerStatus } from '$lib/types/docker';
+import mongoose from 'mongoose';
 import { Container } from '$lib/db/uptimeSchema';
 import * as http from 'http';
 import { env } from '$env/dynamic/private';
 import { requireApiKey } from '$lib/server/auth';
 import { allowedContainers } from '$lib/config/containers';
 import { cache } from '$lib/server/cache';
-import { connectDB } from '$lib/server/db';
-import { deleteOldContainerChecks, runScheduledCleanupIfNeeded } from '$lib/server/cleanup';
+
+let isConnected = false;
+
+const connectDB = async () => {
+    if (!env.MONGODB_URI) {
+        console.error('MONGODB_URI not found');
+        return false;
+    }
+
+    if (isConnected) return true;
+
+    try {
+        await mongoose.connect(env.MONGODB_URI, {
+            serverSelectionTimeoutMS: 5000,
+            connectTimeoutMS: 10000
+        });
+        console.log('MongoDB connected successfully');
+        isConnected = true;
+        return true;
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
+        if (error instanceof Error) {
+            console.error('Error details:', error.message);
+        }
+        return false;
+    }
+};
 
 const calculateUptimeStats = async (containerId: string) => {
     const now = new Date();
@@ -40,6 +66,25 @@ const calculateUptimeStats = async (containerId: string) => {
             isOnline: c.isOnline
         }))
     };
+};
+
+// Function to cleanup data older than 30 days
+const cleanupOldData = async () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    try {
+        const results = await Container.updateMany(
+            {},
+            { $pull: { checks: { timestamp: { $lt: thirtyDaysAgo } } } }
+        );
+        
+        console.log(`Cleaned up data older than 30 days. Modified ${results.modifiedCount} containers.`);
+        return true;
+    } catch (error) {
+        console.error('Failed to clean up old data:', error);
+        return false;
+    }
 };
 
 const UPDATE_INTERVAL = 60 * 1000;
@@ -94,7 +139,7 @@ cache.startInterval(CACHE_KEY, async () => {
                     );
 
                     if (dbConnected) {
-                        // Update container data
+                        // Save new data
                         await Promise.all(
                             allowedContainers.map(({ id }) => 
                                 Container.updateOne(
@@ -112,8 +157,8 @@ cache.startInterval(CACHE_KEY, async () => {
                             )
                         );
                         
-                        // Run scheduled cleanup approximately once per day
-                        await runScheduledCleanupIfNeeded();
+                        // Clean up old data
+                        await cleanupOldData();
                     }
 
                     resolve(services);
@@ -138,17 +183,6 @@ export const GET: RequestHandler = async (event) => {
     if (authResponse) return authResponse;
 
     try {
-        // Check if this is a cleanup request via query parameter
-        const url = new URL(event.request.url);
-        const action = url.searchParams.get('action');
-        
-        if (action === 'cleanup') {
-            console.log('🧹 CLEANUP VIA STATUS: Redirecting to dedicated cleanup endpoint');
-            // Redirect to the dedicated cleanup endpoint with the same authentication
-            return Response.redirect(`${url.origin}/api/cleanup?action=run`, 302);
-        }
-        
-        // Normal GET request processing for status data
         const services = await cache.get(CACHE_KEY, async () => {
             const dbConnected = await connectDB();
             return new Promise((resolve) => {
@@ -198,6 +232,7 @@ export const GET: RequestHandler = async (event) => {
                             );
 
                             if (dbConnected) {
+                                // Save new data
                                 await Promise.all(
                                     allowedContainers.map(({ id }) => 
                                         Container.updateOne(
@@ -214,6 +249,9 @@ export const GET: RequestHandler = async (event) => {
                                         )
                                     )
                                 );
+                                
+                                // Clean up old data
+                                await cleanupOldData();
                             }
 
                             resolve(services);
