@@ -224,6 +224,32 @@ export const DELETE: RequestHandler = async (event) => {
     }
 };
 
+// Add POST endpoint for cleanup (more widely supported than DELETE)
+export const POST: RequestHandler = async (event) => {
+    const authResponse = await requireApiKey(event);
+    if (authResponse) return authResponse;
+
+    try {
+        // Check if the request is for cleanup
+        const requestData = await event.request.json().catch(() => ({ action: '' }));
+        
+        if (requestData.action !== 'cleanup') {
+            return json({ error: 'Invalid action' }, { status: 400 });
+        }
+        
+        const dbConnected = await connectDB();
+        if (!dbConnected) {
+            return json({ error: 'Failed to connect to database' }, { status: 500 });
+        }
+
+        await deleteOldChecks();
+        return json({ success: true, message: 'Old container checks deleted successfully' });
+    } catch (error) {
+        console.error('Error during manual cleanup:', error);
+        return json({ error: 'Failed to clean up old data' }, { status: 500 });
+    }
+};
+
 export const GET: RequestHandler = async (event) => {
     const authResponse = await requireApiKey(event);
     if (authResponse) return authResponse;
