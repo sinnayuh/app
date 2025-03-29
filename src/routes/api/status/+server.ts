@@ -255,6 +255,21 @@ export const GET: RequestHandler = async (event) => {
     if (authResponse) return authResponse;
 
     try {
+        // Check if this is a cleanup request via query parameter
+        const url = new URL(event.request.url);
+        const action = url.searchParams.get('action');
+        
+        if (action === 'cleanup') {
+            const dbConnected = await connectDB();
+            if (!dbConnected) {
+                return json({ error: 'Failed to connect to database' }, { status: 500 });
+            }
+            
+            await deleteOldChecks();
+            return json({ success: true, message: 'Old container checks deleted successfully' });
+        }
+        
+        // Normal GET request processing for status data
         const services = await cache.get(CACHE_KEY, async () => {
             const dbConnected = await connectDB();
             return new Promise((resolve) => {
