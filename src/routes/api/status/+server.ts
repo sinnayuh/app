@@ -1,97 +1,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { ContainerStatus } from '$lib/types/docker';
-import mongoose from 'mongoose';
 import { Container } from '$lib/db/uptimeSchema';
 import * as http from 'http';
 import { env } from '$env/dynamic/private';
 import { requireApiKey } from '$lib/server/auth';
 import { allowedContainers } from '$lib/config/containers';
 import { cache } from '$lib/server/cache';
-
-let isConnected = false;
-
-// Define a constant for the maximum age of data to keep (30 days)
-const MAX_DATA_AGE_DAYS = 30;
-
-const connectDB = async () => {
-    if (!env.MONGODB_URI) {
-        console.error('MONGODB_URI not found');
-        return false;
-    }
-
-    if (isConnected) return true;
-
-    try {
-        await mongoose.connect(env.MONGODB_URI, {
-            serverSelectionTimeoutMS: 5000,
-            connectTimeoutMS: 10000
-        });
-        console.log('MongoDB connected successfully');
-        isConnected = true;
-        return true;
-    } catch (error) {
-        console.error('MongoDB connection error:', error);
-        if (error instanceof Error) {
-            console.error('Error details:', error.message);
-        }
-        return false;
-    }
-};
-
-// Function to delete checks older than MAX_DATA_AGE_DAYS
-const deleteOldChecks = async () => {
-    console.log(`🗑️ Starting cleanup of container data older than ${MAX_DATA_AGE_DAYS} days`);
-    let totalDeleted = 0;
-    
-    try {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - MAX_DATA_AGE_DAYS);
-        console.log(`🗓️ Cutoff date for deletion: ${cutoffDate.toISOString()}`);
-        
-        // Get all containers
-        const containers = await Container.find();
-        console.log(`📊 Found ${containers.length} containers to process`);
-        
-        // For each container, filter out old checks
-        for (const container of containers) {
-            const oldChecksCount = container.checks.filter(
-                (check: any) => check.timestamp < cutoffDate
-            ).length;
-            
-            if (oldChecksCount > 0) {
-                console.log(`📦 Container ${container.containerId}: Found ${oldChecksCount} checks to delete`);
-                
-                // Use $pull to remove checks older than the cutoff date
-                const result = await Container.updateOne(
-                    { _id: container._id },
-                    {
-                        $pull: {
-                            checks: {
-                                timestamp: { $lt: cutoffDate }
-                            }
-                        }
-                    }
-                );
-                
-                console.log(`✅ Container ${container.containerId}: Deleted ${oldChecksCount} old checks (MongoDB response: ${JSON.stringify(result)})`);
-                totalDeleted += oldChecksCount;
-            } else {
-                console.log(`✓ Container ${container.containerId}: No old checks to delete`);
-            }
-        }
-        
-        console.log(`🎉 Cleanup completed: Deleted ${totalDeleted} old checks in total`);
-    } catch (error) {
-        console.error('❌ Error deleting old checks:', error);
-        if (error instanceof Error) {
-            console.error('Error details:', error.message);
-        }
-        throw error; // Re-throw to allow proper handling by caller
-    }
-    
-    return totalDeleted;
-};
+import { connectDB } from '$lib/server/db';
+import { deleteOldContainerChecks, runScheduledCleanupIfNeeded } from '$lib/server/cleanup';
 
 const calculateUptimeStats = async (containerId: string) => {
     const now = new Date();
@@ -195,20 +112,8 @@ cache.startInterval(CACHE_KEY, async () => {
                             )
                         );
                         
-                        // Run cleanup once per day (approximately)
-                        // Only clean up on every 1440th request (60 seconds * 24 hours = 1440 minutes)
-                        const cleanupInterval = 1440;
-                        const shouldCleanup = Math.random() < (1 / cleanupInterval);
-                        
-                        if (shouldCleanup) {
-                            console.log('⏰ SCHEDULED CLEANUP: Running automated daily cleanup');
-                            try {
-                                const deletedCount = await deleteOldChecks();
-                                console.log(`⏰ SCHEDULED CLEANUP COMPLETED: Removed ${deletedCount} old records`);
-                            } catch (cleanupError) {
-                                console.error('⏰ SCHEDULED CLEANUP FAILED:', cleanupError);
-                            }
-                        }
+                        // Run scheduled cleanup approximately once per day
+                        await runScheduledCleanupIfNeeded();
                     }
 
                     resolve(services);
@@ -228,51 +133,6 @@ cache.startInterval(CACHE_KEY, async () => {
     });
 }, UPDATE_INTERVAL);
 
-// Expose an endpoint to manually trigger cleanup
-export const DELETE: RequestHandler = async (event) => {
-    const authResponse = await requireApiKey(event);
-    if (authResponse) return authResponse;
-
-    try {
-        const dbConnected = await connectDB();
-        if (!dbConnected) {
-            return json({ error: 'Failed to connect to database' }, { status: 500 });
-        }
-
-        await deleteOldChecks();
-        return json({ success: true, message: 'Old container checks deleted successfully' });
-    } catch (error) {
-        console.error('Error during manual cleanup:', error);
-        return json({ error: 'Failed to clean up old data' }, { status: 500 });
-    }
-};
-
-// Add POST endpoint for cleanup (more widely supported than DELETE)
-export const POST: RequestHandler = async (event) => {
-    const authResponse = await requireApiKey(event);
-    if (authResponse) return authResponse;
-
-    try {
-        // Check if the request is for cleanup
-        const requestData = await event.request.json().catch(() => ({ action: '' }));
-        
-        if (requestData.action !== 'cleanup') {
-            return json({ error: 'Invalid action' }, { status: 400 });
-        }
-        
-        const dbConnected = await connectDB();
-        if (!dbConnected) {
-            return json({ error: 'Failed to connect to database' }, { status: 500 });
-        }
-
-        await deleteOldChecks();
-        return json({ success: true, message: 'Old container checks deleted successfully' });
-    } catch (error) {
-        console.error('Error during manual cleanup:', error);
-        return json({ error: 'Failed to clean up old data' }, { status: 500 });
-    }
-};
-
 export const GET: RequestHandler = async (event) => {
     const authResponse = await requireApiKey(event);
     if (authResponse) return authResponse;
@@ -283,32 +143,9 @@ export const GET: RequestHandler = async (event) => {
         const action = url.searchParams.get('action');
         
         if (action === 'cleanup') {
-            console.log('🧹 CLEANUP REQUESTED: Manually triggered cleanup via API');
-            const dbConnected = await connectDB();
-            if (!dbConnected) {
-                console.error('❌ CLEANUP FAILED: Could not connect to database');
-                return json({ error: 'Failed to connect to database' }, { status: 500 });
-            }
-            
-            try {
-                const deletedCount = await deleteOldChecks();
-                console.log(`✅ CLEANUP COMPLETED: Manual cleanup finished successfully, removed ${deletedCount} records`);
-                return json({ 
-                    success: true, 
-                    message: 'Old container checks deleted successfully',
-                    details: {
-                        recordsDeleted: deletedCount,
-                        timestamp: new Date().toISOString(),
-                        maxAgeInDays: MAX_DATA_AGE_DAYS
-                    }
-                });
-            } catch (cleanupError) {
-                console.error('❌ CLEANUP ERROR:', cleanupError);
-                return json({ 
-                    error: 'Failed to clean up old data',
-                    details: cleanupError instanceof Error ? cleanupError.message : 'Unknown error'
-                }, { status: 500 });
-            }
+            console.log('🧹 CLEANUP VIA STATUS: Redirecting to dedicated cleanup endpoint');
+            // Redirect to the dedicated cleanup endpoint with the same authentication
+            return Response.redirect(`${url.origin}/api/cleanup?action=run`, 302);
         }
         
         // Normal GET request processing for status data
