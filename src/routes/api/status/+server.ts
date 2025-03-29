@@ -11,6 +11,9 @@ import { cache } from '$lib/server/cache';
 
 let isConnected = false;
 
+// Define a constant for the maximum age of data to keep (30 days)
+const MAX_DATA_AGE_DAYS = 30;
+
 const connectDB = async () => {
     if (!env.MONGODB_URI) {
         console.error('MONGODB_URI not found');
@@ -33,6 +36,42 @@ const connectDB = async () => {
             console.error('Error details:', error.message);
         }
         return false;
+    }
+};
+
+// Function to delete checks older than MAX_DATA_AGE_DAYS
+const deleteOldChecks = async () => {
+    try {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - MAX_DATA_AGE_DAYS);
+        
+        // Get all containers
+        const containers = await Container.find();
+        
+        // For each container, filter out old checks
+        for (const container of containers) {
+            const oldChecksCount = container.checks.filter(
+                (check: any) => check.timestamp < cutoffDate
+            ).length;
+            
+            if (oldChecksCount > 0) {
+                // Use $pull to remove checks older than the cutoff date
+                await Container.updateOne(
+                    { _id: container._id },
+                    {
+                        $pull: {
+                            checks: {
+                                timestamp: { $lt: cutoffDate }
+                            }
+                        }
+                    }
+                );
+                
+                console.log(`Deleted ${oldChecksCount} old checks for container ${container.containerId}`);
+            }
+        }
+    } catch (error) {
+        console.error('Error deleting old checks:', error);
     }
 };
 
@@ -120,6 +159,7 @@ cache.startInterval(CACHE_KEY, async () => {
                     );
 
                     if (dbConnected) {
+                        // Update container data
                         await Promise.all(
                             allowedContainers.map(({ id }) => 
                                 Container.updateOne(
@@ -136,6 +176,16 @@ cache.startInterval(CACHE_KEY, async () => {
                                 )
                             )
                         );
+                        
+                        // Run cleanup once per day (approximately)
+                        // Only clean up on every 1440th request (60 seconds * 24 hours = 1440 minutes)
+                        const cleanupInterval = 1440;
+                        const shouldCleanup = Math.random() < (1 / cleanupInterval);
+                        
+                        if (shouldCleanup) {
+                            console.log('Running scheduled cleanup of old container checks');
+                            await deleteOldChecks();
+                        }
                     }
 
                     resolve(services);
@@ -154,6 +204,25 @@ cache.startInterval(CACHE_KEY, async () => {
         req.end();
     });
 }, UPDATE_INTERVAL);
+
+// Expose an endpoint to manually trigger cleanup
+export const DELETE: RequestHandler = async (event) => {
+    const authResponse = await requireApiKey(event);
+    if (authResponse) return authResponse;
+
+    try {
+        const dbConnected = await connectDB();
+        if (!dbConnected) {
+            return json({ error: 'Failed to connect to database' }, { status: 500 });
+        }
+
+        await deleteOldChecks();
+        return json({ success: true, message: 'Old container checks deleted successfully' });
+    } catch (error) {
+        console.error('Error during manual cleanup:', error);
+        return json({ error: 'Failed to clean up old data' }, { status: 500 });
+    }
+};
 
 export const GET: RequestHandler = async (event) => {
     const authResponse = await requireApiKey(event);
