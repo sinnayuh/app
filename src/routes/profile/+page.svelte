@@ -11,7 +11,8 @@
 		{ label: 'discord:', value: 'sinnayuh', link: 'https://discord.com/users/204608845325008906' },
 		{ label: 'github:', value: 'sinnayuh', link: 'https://github.com/sinnayuh' },
 		{ label: 'telegram:', value: '@sinnerful', link: 'https://t.me/sinnerful' },
-		{ label: 'timezone:', value: 'gmt (uk)', link: 'https://time.is/GMT' }
+		{ label: 'timezone:', value: 'gmt (uk)', link: 'https://time.is/GMT' },
+		{ label: 'shop:', value: 'eclipse', link: 'https://discord.com/invite/vFfkxkpvXk' }
 	];
 
 	const mySong = {
